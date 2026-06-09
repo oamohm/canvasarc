@@ -1,1 +1,1 @@
-export default function Page() { return <h1>hello</h1>; }
+export default function Page() { return <div>hello</div>; }
