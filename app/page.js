@@ -1,7 +1,8 @@
 'use client'
+
 import { useState, useCallback } from 'react'
 
-export default function ArcCanvas() {
+export default function Home() {
   // State management
   const [wallet, setWallet] = useState(null)
   const [isConnecting, setIsConnecting] = useState(false)
@@ -383,7 +384,7 @@ export default function ArcCanvas() {
             margin: '0 auto'
           }}>
             <div className="glass-card neon-border">
-              <h3 style{{ marginBottom: '24px' }}>Complete Your Settlement</h3>
+              <h3 style={{ marginBottom: '24px' }}>Complete Your Settlement</h3>
 
               <div style={{ marginBottom: '20px' }}>
                 <label style={{
