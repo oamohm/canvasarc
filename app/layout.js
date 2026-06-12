@@ -1,25 +1,20 @@
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-const geist = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
 export const metadata = {
-  title: "ArcCanvas - Deterministic Builder",
-  description: "Build with Arc Engine - Wallet Settlement Layer",
+  title: "ArcCanvas - Arc-Native Settlement Platform",
+  description: "Web3 wallet, UPI, and international transfers unified on Arc protocol",
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className={`${geist.variable} ${geistMono.variable}`}>
+      <body style={{ fontFamily: 'var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
         {children}
       </body>
     </html>
