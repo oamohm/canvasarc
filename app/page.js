@@ -2,341 +2,468 @@
 import { useState, useCallback } from 'react'
 
 export default function ArcCanvas() {
-  // Enhanced state management with transaction handling
-  const [session, setSession] = useState({ 
-    email: null, 
-    wallet: null, 
-    status: 'ready',
-    isConnecting: false,
-    transactionInProgress: false 
-  })
-  const [stream, setStream] = useState([
-    'Arc Engine: Initialized', 
-    'Waiting for User Input...'
-  ])
-  const [formData, setFormData] = useState({
-    email: '',
-    amount: ''
-  })
+  // State management
+  const [wallet, setWallet] = useState(null)
+  const [isConnecting, setIsConnecting] = useState(false)
+  const [totalSettled, setTotalSettled] = useState('$1,750.00')
+  const [completedCount, setCompletedCount] = useState(28)
+  const [showStats, setShowStats] = useState(true)
+  const [email, setEmail] = useState('')
+  const [amount, setAmount] = useState('')
+  const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState(null)
+  const [successMessage, setSuccessMessage] = useState('')
 
-  // Add stream message with timestamp
-  const addStreamMessage = useCallback((message) => {
-    const timestamp = new Date().toLocaleTimeString()
-    setStream(prev => [...prev, `[${timestamp}] ${message}`])
+  // Connect wallet
+  const handleConnectWallet = useCallback(async () => {
+    setIsConnecting(true)
+    setError(null)
+
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1200))
+      const mockAddress = '0x' + Math.random().toString(16).slice(2, 42)
+      setWallet(mockAddress)
+      setSuccessMessage('Wallet connected successfully!')
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } catch (err) {
+      setError('Failed to connect wallet')
+    } finally {
+      setIsConnecting(false)
+    }
   }, [])
 
-  // Wallet connection with proper error handling
-  const connectWallet = useCallback(async () => {
-    try {
-      setSession(prev => ({ ...prev, isConnecting: true }))
-      setError(null)
-      addStreamMessage('Initiating wallet connection...')
+  // Disconnect wallet
+  const handleDisconnect = useCallback(() => {
+    setWallet(null)
+    setEmail('')
+    setAmount('')
+    setError(null)
+  }, [])
 
-      // Simulate wallet connection with timeout
-      const walletAddress = await new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => {
-          reject(new Error('Wallet connection timeout'))
-        }, 10000)
-
-        // Mock wallet connection
-        setTimeout(() => {
-          clearTimeout(timeout)
-          resolve('0x' + Math.random().toString(16).slice(2, 42))
-        }, 1000)
-      })
-
-      setSession(prev => ({ 
-        ...prev, 
-        wallet: walletAddress,
-        status: 'connected',
-        isConnecting: false 
-      }))
-      addStreamMessage(`Wallet Address Verified: ${walletAddress}`)
-      addStreamMessage('Deterministic Path Active')
-    } catch (err) {
-      setError(err.message)
-      addStreamMessage(`Connection Error: ${err.message}`)
-      setSession(prev => ({ ...prev, isConnecting: false }))
-    }
-  }, [addStreamMessage])
-
-  // Wallet disconnect with cleanup
-  const disconnectWallet = useCallback(() => {
-    try {
-      addStreamMessage('Initiating wallet disconnection...')
-      setSession({ 
-        email: null, 
-        wallet: null, 
-        status: 'ready',
-        isConnecting: false,
-        transactionInProgress: false 
-      })
-      setFormData({ email: '', amount: '' })
-      setError(null)
-      addStreamMessage('Wallet disconnected successfully')
-      addStreamMessage('Ready for new connection')
-    } catch (err) {
-      addStreamMessage(`Disconnection Error: ${err.message}`)
-    }
-  }, [addStreamMessage])
-
-  // Enhanced transaction execution with retry logic
-  const executeTransaction = useCallback(async () => {
-    if (!session.wallet) {
-      setError('Wallet not connected')
-      addStreamMessage('Error: Wallet not connected')
+  // Handle settlement
+  const handleSettle = useCallback(async () => {
+    if (!wallet) {
+      setError('Please connect wallet first')
       return
     }
 
-    if (!formData.email || !formData.amount) {
+    if (!email || !amount) {
       setError('Please fill in all fields')
-      addStreamMessage('Error: Missing required fields')
       return
     }
 
-    const maxRetries = 3
-    let retryCount = 0
-
-    const executeWithRetry = async () => {
-      try {
-        setSession(prev => ({ ...prev, transactionInProgress: true }))
-        setError(null)
-        addStreamMessage(`Executing transaction - Attempt ${retryCount + 1}/${maxRetries}`)
-        addStreamMessage(`Amount: ${formData.amount} USDC`)
-        addStreamMessage(`Email: ${formData.email}`)
-
-        // Simulate transaction with timeout
-        const result = await new Promise((resolve, reject) => {
-          const timeout = setTimeout(() => {
-            reject(new Error('Transaction timeout'))
-          }, 15000)
-
-          setTimeout(() => {
-            clearTimeout(timeout)
-            // Simulate 70% success rate for demo
-            if (Math.random() > 0.3) {
-              resolve({
-                hash: '0x' + Math.random().toString(16).slice(2, 66),
-                status: 'success'
-              })
-            } else {
-              reject(new Error('Transaction failed: Insufficient funds'))
-            }
-          }, 2000)
-        })
-
-        addStreamMessage(`Transaction Hash: ${result.hash}`)
-        addStreamMessage('Transaction Status: Confirmed')
-        addStreamMessage('Settlement Layer: Active')
-        setSession(prev => ({ ...prev, transactionInProgress: false }))
-        setFormData({ email: '', amount: '' })
-
-      } catch (err) {
-        if (retryCount < maxRetries - 1) {
-          retryCount++
-          addStreamMessage(`Retry scheduled in 2 seconds... (${retryCount}/${maxRetries - 1})`)
-          await new Promise(resolve => setTimeout(resolve, 2000))
-          return executeWithRetry()
-        } else {
-          throw err
-        }
-      }
-    }
+    setIsProcessing(true)
+    setError(null)
 
     try {
-      await executeWithRetry()
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      const newTotal = parseFloat(totalSettled.replace(/[$,]/g, '')) + parseFloat(amount)
+      setTotalSettled(`$${newTotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`)
+      setCompletedCount(prev => prev + 1)
+      setEmail('')
+      setAmount('')
+      setSuccessMessage('Settlement completed successfully!')
+      setTimeout(() => setSuccessMessage(''), 3000)
     } catch (err) {
-      setError(err.message)
-      addStreamMessage(`Transaction Failed: ${err.message}`)
-      addStreamMessage('Please try again or check your wallet balance')
-      setSession(prev => ({ ...prev, transactionInProgress: false }))
+      setError('Settlement failed. Please try again.')
+    } finally {
+      setIsProcessing(false)
     }
-  }, [session.wallet, formData, addStreamMessage])
+  }, [wallet, email, amount, totalSettled])
 
   return (
-    <main style={{ minHeight: '100vh', background: '#0a0a0a', color: '#ededed', padding: '40px', fontFamily: 'monospace' }}>
-      <header style={{ borderBottom: '1px solid #333', paddingBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 style={{ margin: 0 }}>ARCCANVAS // BUILDER</h1>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <span style={{ fontSize: '12px', color: '#888' }}>
-            Status: <span style={{ color: session.status === 'connected' ? '#0f0' : '#f00' }}>
-              {session.status.toUpperCase()}
-            </span>
-          </span>
-          {session.wallet ? (
-            <>
-              <button 
-                onClick={disconnectWallet}
-                disabled={session.transactionInProgress}
-                style={{ 
-                  background: '#dc2626', 
-                  border: 'none', 
-                  padding: '10px 20px', 
-                  cursor: session.transactionInProgress ? 'not-allowed' : 'pointer',
-                  opacity: session.transactionInProgress ? 0.5 : 1,
-                  color: '#fff',
-                  borderRadius: '4px'
-                }}
-              >
-                Disconnect
-              </button>
-              <span style={{ fontSize: '12px', color: '#0f0' }}>
-                {session.wallet.slice(0, 6)}...{session.wallet.slice(-4)}
-              </span>
-            </>
-          ) : (
-            <button 
-              onClick={connectWallet}
-              disabled={session.isConnecting}
-              style={{ 
-                background: '#fff', 
-                border: 'none', 
-                padding: '10px 20px', 
-                cursor: session.isConnecting ? 'not-allowed' : 'pointer',
-                opacity: session.isConnecting ? 0.5 : 1,
-                color: '#000',
-                borderRadius: '4px',
-                fontWeight: 'bold'
-              }}
-            >
-              {session.isConnecting ? 'Connecting...' : 'Connect Wallet'}
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {/* Header Navigation */}
+      <header style={{
+        background: 'rgba(11, 14, 17, 0.8)',
+        backdropFilter: 'blur(10px)',
+        borderBottom: '1px solid rgba(148, 163, 184, 0.1)',
+        padding: '20px 40px',
+        position: 'sticky',
+        top: 0,
+        zIndex: 100
+      }}>
+        <div style={{
+          maxWidth: '1400px',
+          margin: '0 auto',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          {/* Logo */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <h1 style={{
+              margin: 0,
+              fontSize: '24px',
+              fontWeight: 700
+            }}>
+              <span className="gradient-text">ArcCanvas</span>
+            </h1>
+            <div className="status-pill">Production Ready</div>
+          </div>
+
+          {/* Navigation Icons */}
+          <div style={{ display: 'flex', gap: '32px', alignItems: 'center' }}>
+            <button style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'rgba(224, 224, 224, 0.7)',
+              fontSize: '16px',
+              cursor: 'pointer',
+              transition: 'color 0.3s ease'
+            }} onMouseEnter={(e) => e.target.style.color = '#a855f7'} onMouseLeave={(e) => e.target.style.color = 'rgba(224, 224, 224, 0.7)'}>
+              📊 Stats
             </button>
-          )}
+            <button style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'rgba(224, 224, 224, 0.7)',
+              fontSize: '16px',
+              cursor: 'pointer',
+              transition: 'color 0.3s ease'
+            }} onMouseEnter={(e) => e.target.style.color = '#a855f7'} onMouseLeave={(e) => e.target.style.color = 'rgba(224, 224, 224, 0.7)'}>
+              ⚙️ Settings
+            </button>
+
+            {/* Wallet Button */}
+            {wallet ? (
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <span style={{
+                  background: 'rgba(168, 85, 247, 0.1)',
+                  border: '1px solid rgba(168, 85, 247, 0.3)',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  color: '#a855f7'
+                }}>
+                  {wallet.slice(0, 6)}...{wallet.slice(-4)}
+                </span>
+                <button
+                  onClick={handleDisconnect}
+                  style={{
+                    background: 'rgba(239, 68, 68, 0.2)',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    color: '#ef4444',
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = 'rgba(239, 68, 68, 0.3)'
+                    e.target.style.boxShadow = '0 0 15px rgba(239, 68, 68, 0.3)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = 'rgba(239, 68, 68, 0.2)'
+                    e.target.style.boxShadow = 'none'
+                  }}
+                >
+                  Disconnect
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleConnectWallet}
+                disabled={isConnecting}
+                className="btn-primary"
+                style={{ padding: '10px 24px', fontSize: '14px' }}
+              >
+                {isConnecting ? 'Connecting...' : 'Connect Wallet'}
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
-      {error && (
-        <div style={{ 
-          background: '#7f1d1d', 
-          border: '1px solid #dc2626', 
-          color: '#fca5a5',
-          padding: '15px', 
-          marginTop: '20px',
-          borderRadius: '4px'
+      {/* Main Content */}
+      <main style={{
+        flex: 1,
+        maxWidth: '1400px',
+        margin: '0 auto',
+        padding: '60px 40px',
+        width: '100%'
+      }}>
+        {/* Hero Section */}
+        <section style={{
+          textAlign: 'center',
+          marginBottom: '80px'
         }}>
-          ⚠️ {error}
-        </div>
-      )}
-
-      <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', marginTop: '40px' }}>
-        {/* Settlement Layer */}
-        <div style={{ border: '1px solid #333', padding: '30px', borderRadius: '8px' }}>
-          <h2>Settlement Layer</h2>
-          <p style={{ fontSize: '12px', color: '#888', marginBottom: '20px' }}>
-            Execute deterministic settlements with wallet verification and transaction tracking.
-          </p>
-          
-          <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', fontSize: '12px', color: '#aaa', marginBottom: '5px' }}>
-              Verification Email
-            </label>
-            <input 
-              type="email" 
-              placeholder="your@email.com" 
-              value={formData.email}
-              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-              disabled={!session.wallet || session.transactionInProgress}
-              style={{ 
-                width: '100%', 
-                padding: '10px', 
-                background: '#111', 
-                color: '#fff', 
-                border: '1px solid #444', 
-                marginBottom: '0px',
-                borderRadius: '4px',
-                opacity: !session.wallet || session.transactionInProgress ? 0.5 : 1,
-                cursor: !session.wallet || session.transactionInProgress ? 'not-allowed' : 'text'
-              }} 
-            />
-          </div>
-
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '12px', color: '#aaa', marginBottom: '5px' }}>
-              USDC Amount
-            </label>
-            <input 
-              type="number" 
-              placeholder="Enter amount" 
-              value={formData.amount}
-              onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
-              disabled={!session.wallet || session.transactionInProgress}
-              style={{ 
-                width: '100%', 
-                padding: '10px', 
-                background: '#111', 
-                color: '#fff', 
-                border: '1px solid #444', 
-                marginBottom: '0px',
-                borderRadius: '4px',
-                opacity: !session.wallet || session.transactionInProgress ? 0.5 : 1,
-                cursor: !session.wallet || session.transactionInProgress ? 'not-allowed' : 'text'
-              }} 
-            />
-          </div>
-
-          <button 
-            onClick={executeTransaction}
-            disabled={!session.wallet || session.transactionInProgress}
-            style={{ 
-              width: '100%', 
-              padding: '12px', 
-              background: session.wallet && !session.transactionInProgress ? '#2563eb' : '#4b5563', 
-              color: '#fff', 
-              border: 'none', 
-              fontWeight: 'bold',
-              cursor: session.wallet && !session.transactionInProgress ? 'pointer' : 'not-allowed',
-              opacity: session.wallet && !session.transactionInProgress ? 1 : 0.5,
-              borderRadius: '4px'
-            }}
-          >
-            {session.transactionInProgress ? 'Processing...' : 'Execute Transaction'}
-          </button>
-
-          <p style={{ fontSize: '12px', color: '#888', marginTop: '15px' }}>
-            {!session.wallet ? '⚠️ Connect wallet to proceed' : '✓ Ready to execute'}
-          </p>
-        </div>
-
-        {/* Live Streaming Feed */}
-        <div style={{ border: '1px solid #333', padding: '30px', borderRadius: '8px' }}>
-          <h2>Deterministic Stream</h2>
-          <p style={{ fontSize: '12px', color: '#888', marginBottom: '15px' }}>
-            Real-time event log with timestamps and transaction confirmations.
-          </p>
-          
-          <div style={{ 
-            background: '#000', 
-            height: '400px', 
-            padding: '15px', 
-            color: '#0f0', 
-            overflowY: 'auto', 
-            borderRadius: '4px', 
-            fontSize: '12px',
-            border: '1px solid #222',
-            fontFamily: '"Courier New", monospace'
+          <h2 style={{
+            fontSize: '3.5rem',
+            fontWeight: 800,
+            marginBottom: '16px',
+            background: 'linear-gradient(135deg, #e0e0e0 0%, #a0a0a0 100%)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent'
           }}>
-            {stream.length === 0 ? (
-              <p style={{ color: '#666' }}>No events yet...</p>
-            ) : (
-              stream.map((line, i) => (
-                <p key={i} style={{ margin: '4px 0', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                  {'> '}{line}
-                </p>
-              ))
-            )}
-          </div>
+            Arc-Native Settlement Platform
+          </h2>
+          <p style={{
+            fontSize: '1.25rem',
+            color: 'rgba(224, 224, 224, 0.7)',
+            marginBottom: '40px',
+            maxWidth: '600px',
+            margin: '0 auto 40px'
+          }}>
+            Web3 wallet, UPI, and international transfers unified.
+          </p>
 
-          <div style={{ marginTop: '15px', fontSize: '11px', color: '#666' }}>
-            <p>Total Events: {stream.length}</p>
+          <div style={{
+            display: 'flex',
+            gap: '16px',
+            justifyContent: 'center',
+            flexWrap: 'wrap'
+          }}>
+            <button
+              onClick={handleSettle}
+              disabled={!wallet || isProcessing}
+              className="btn-primary"
+              style={{
+                fontSize: '16px',
+                padding: '14px 40px'
+              }}
+            >
+              {isProcessing ? 'Processing...' : '🚀 Settle on Arc'}
+            </button>
+            <button
+              onClick={() => setShowStats(!showStats)}
+              className="btn-secondary"
+              style={{
+                fontSize: '16px',
+                padding: '14px 40px'
+              }}
+            >
+              📈 Settlement Tracker
+            </button>
           </div>
-        </div>
-      </section>
+        </section>
+
+        {/* Alert Messages */}
+        {error && (
+          <div style={{
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            color: '#fca5a5',
+            padding: '16px',
+            borderRadius: '8px',
+            marginBottom: '24px',
+            fontSize: '14px'
+          }}>
+            ⚠️ {error}
+          </div>
+        )}
+
+        {successMessage && (
+          <div style={{
+            background: 'rgba(34, 197, 94, 0.1)',
+            border: '1px solid rgba(34, 197, 94, 0.3)',
+            color: '#4ade80',
+            padding: '16px',
+            borderRadius: '8px',
+            marginBottom: '24px',
+            fontSize: '14px'
+          }}>
+            ✓ {successMessage}
+          </div>
+        )}
+
+        {/* Dashboard Stats */}
+        {showStats && (
+          <section style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            gap: '24px',
+            marginBottom: '60px'
+          }}>
+            {/* Total Settled Card */}
+            <div className="glass-card" style={{
+              animation: 'fadeIn 0.6s ease-out'
+            }}>
+              <p style={{
+                fontSize: '12px',
+                color: 'rgba(224, 224, 224, 0.6)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                marginBottom: '12px'
+              }}>
+                Total Settled
+              </p>
+              <h3 style={{
+                fontSize: '2.5rem',
+                margin: '0 0 16px 0',
+                background: 'linear-gradient(135deg, #a855f7 0%, #22d3ee 100%)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent'
+              }}>
+                {totalSettled}
+              </h3>
+              <p style={{
+                fontSize: '13px',
+                color: 'rgba(224, 224, 224, 0.5)',
+                margin: 0
+              }}>
+                Across all settlements
+              </p>
+            </div>
+
+            {/* Completed Count Card */}
+            <div className="glass-card" style={{
+              animation: 'fadeIn 0.6s ease-out 0.1s backwards'
+            }}>
+              <p style={{
+                fontSize: '12px',
+                color: 'rgba(224, 224, 224, 0.6)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                marginBottom: '12px'
+              }}>
+                Completed
+              </p>
+              <h3 style={{
+                fontSize: '2.5rem',
+                margin: '0 0 16px 0',
+                background: 'linear-gradient(135deg, #4ade80 0%, #22d3ee 100%)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent'
+              }}>
+                {completedCount}
+              </h3>
+              <p style={{
+                fontSize: '13px',
+                color: 'rgba(224, 224, 224, 0.5)',
+                margin: 0
+              }}>
+                Successful transactions
+              </p>
+            </div>
+
+            {/* Success Rate Card */}
+            <div className="glass-card" style={{
+              animation: 'fadeIn 0.6s ease-out 0.2s backwards'
+            }}>
+              <p style={{
+                fontSize: '12px',
+                color: 'rgba(224, 224, 224, 0.6)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                marginBottom: '12px'
+              }}>
+                Success Rate
+              </p>
+              <h3 style={{
+                fontSize: '2.5rem',
+                margin: '0 0 16px 0',
+                background: 'linear-gradient(135deg, #f59e0b 0%, #a855f7 100%)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent'
+              }}>
+                99.8%
+              </h3>
+              <p style={{
+                fontSize: '13px',
+                color: 'rgba(224, 224, 224, 0.5)',
+                margin: 0
+              }}>
+                Industry-leading uptime
+              </p>
+            </div>
+          </section>
+        )}
+
+        {/* Settlement Form */}
+        {wallet && (
+          <section style={{
+            maxWidth: '600px',
+            margin: '0 auto'
+          }}>
+            <div className="glass-card neon-border">
+              <h3 style{{ marginBottom: '24px' }}>Complete Your Settlement</h3>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: '13px',
+                  color: 'rgba(224, 224, 224, 0.7)',
+                  marginBottom: '8px',
+                  fontWeight: 600
+                }}>
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    color: '#e0e0e0'
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: '13px',
+                  color: 'rgba(224, 224, 224, 0.7)',
+                  marginBottom: '8px',
+                  fontWeight: 600
+                }}>
+                  Settlement Amount (USD)
+                </label>
+                <input
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="0.00"
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    color: '#e0e0e0'
+                  }}
+                />
+              </div>
+
+              <button
+                onClick={handleSettle}
+                disabled={isProcessing}
+                className="btn-primary"
+                style={{
+                  width: '100%',
+                  padding: '14px 24px',
+                  fontSize: '16px'
+                }}
+              >
+                {isProcessing ? 'Processing Settlement...' : 'Execute Settlement'}
+              </button>
+            </div>
+          </section>
+        )}
+      </main>
 
       {/* Footer */}
-      <footer style={{ marginTop: '60px', paddingTop: '20px', borderTop: '1px solid #333', textAlign: 'center', fontSize: '12px', color: '#666' }}>
-        <p>ArcCanvas © 2026 | Deterministic Settlement Layer | Powered by Next.js + Wagmi</p>
+      <footer style={{
+        borderTop: '1px solid rgba(148, 163, 184, 0.1)',
+        padding: '40px',
+        textAlign: 'center',
+        color: 'rgba(224, 224, 224, 0.5)',
+        fontSize: '13px'
+      }}>
+        <p>
+          ArcCanvas © 2026 | Arc-Native Settlement Layer | Powered by Next.js + Web3
+        </p>
       </footer>
-    </main>
+    </div>
   )
 }
